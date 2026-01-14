@@ -1,0 +1,5 @@
+{
+  "name": "ArchiFlow AI",
+  "description": "A visual architectural design wizard that uses Gemini models to generate, edit, and animate architectural concepts.",
+  "requestFramePermissions": []
+}
