@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon, GripVertical } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface WorkflowNodeProps {
   title: string;
@@ -8,13 +8,9 @@ interface WorkflowNodeProps {
   isActive?: boolean;
   children: React.ReactNode;
   actions?: React.ReactNode;
-  stepNumber?: number; // Optional now as some nodes might be utilities
-  
-  // Drag props
-  draggable?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
-  onDragOver?: (e: React.DragEvent) => void;
-  onDrop?: (e: React.DragEvent) => void;
+  status?: string;
+  position: { x: number; y: number };
+  onMouseDown: (e: React.MouseEvent) => void;
 }
 
 export const WorkflowNode: React.FC<WorkflowNodeProps> = ({ 
@@ -24,95 +20,60 @@ export const WorkflowNode: React.FC<WorkflowNodeProps> = ({
   isActive, 
   children, 
   actions,
-  stepNumber,
-  draggable,
-  onDragStart,
-  onDragOver,
-  onDrop
+  status,
+  position,
+  onMouseDown
 }) => {
-  // Color mapping safe for Tailwind JIT
-  const colorClasses = {
-    blue: { border: 'border-blue-200', activeBorder: 'border-blue-500', bg: 'bg-blue-50', text: 'text-blue-600', dot: 'bg-blue-500' },
-    indigo: { border: 'border-indigo-200', activeBorder: 'border-indigo-500', bg: 'bg-indigo-50', text: 'text-indigo-600', dot: 'bg-indigo-500' },
-    purple: { border: 'border-purple-200', activeBorder: 'border-purple-500', bg: 'bg-purple-50', text: 'text-purple-600', dot: 'bg-purple-500' },
-    emerald: { border: 'border-emerald-200', activeBorder: 'border-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600', dot: 'bg-emerald-500' },
-    slate: { border: 'border-slate-200', activeBorder: 'border-slate-500', bg: 'bg-slate-50', text: 'text-slate-600', dot: 'bg-slate-500' },
-    amber: { border: 'border-amber-200', activeBorder: 'border-amber-500', bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500' },
+  // Theme configuration for Dark Mode
+  const themes: Record<string, { border: string, iconColor: string, iconBg: string }> = {
+    blue: { border: 'border-blue-500', iconColor: 'text-blue-400', iconBg: 'bg-blue-500/10' },
+    purple: { border: 'border-purple-500', iconColor: 'text-purple-400', iconBg: 'bg-purple-500/10' },
+    emerald: { border: 'border-emerald-500', iconColor: 'text-emerald-400', iconBg: 'bg-emerald-500/10' },
+    amber: { border: 'border-amber-500', iconColor: 'text-amber-400', iconBg: 'bg-amber-500/10' },
+    indigo: { border: 'border-indigo-500', iconColor: 'text-indigo-400', iconBg: 'bg-indigo-500/10' },
+    slate: { border: 'border-slate-500', iconColor: 'text-slate-400', iconBg: 'bg-slate-500/10' },
   };
 
-  const theme = colorClasses[color as keyof typeof colorClasses] || colorClasses.slate;
-  const borderClass = isActive ? theme.activeBorder : 'border-slate-200';
-  const shadowClass = isActive ? 'shadow-xl ring-1 ring-black/5' : 'shadow-md';
+  const theme = themes[color] || themes.slate;
 
   return (
     <div 
-      className={`w-[400px] flex-shrink-0 bg-white rounded-xl border ${borderClass} ${shadowClass} flex flex-col transition-all duration-300 relative group`}
-      draggable={draggable}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      className={`absolute w-96 rounded-xl bg-slate-900 border transition-shadow duration-200 flex flex-col group
+        ${isActive ? `${theme.border} shadow-[0_0_20px_rgba(0,0,0,0.3)] ring-1 ring-${color}-500/50` : 'border-slate-800 shadow-xl hover:border-slate-700'}
+      `}
+      style={{
+        left: position.x,
+        top: position.y,
+        // Ensure active node is visually prioritized slightly (simple z-index handling could be added in parent)
+      }}
+      onMouseDown={onMouseDown}
     >
-       {/* Connection Point Left (Only show if part of main flow, heuristic based on stepNumber) */}
-       {stepNumber && (
-         <div className="absolute top-8 -left-3 w-6 h-6 bg-white border border-slate-300 rounded-full z-10 flex items-center justify-center">
-            <div className={`w-2 h-2 rounded-full ${isActive ? theme.dot : 'bg-slate-300'}`} />
-         </div>
-       )}
-
-       {/* Header */}
-       <div className={`p-4 border-b border-slate-100 flex items-center justify-between rounded-t-xl ${isActive ? 'bg-slate-50/50' : ''} ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+       {/* Header - The "Grip" area */}
+       <div className="p-4 border-b border-slate-800 flex items-start justify-between cursor-grab active:cursor-grabbing select-none">
           <div className="flex items-center gap-3">
-            {stepNumber ? (
-               <div className={`w-8 h-8 rounded-lg ${theme.bg} ${theme.text} flex items-center justify-center font-bold text-sm`}>
-                 {stepNumber}
-               </div>
-            ) : (
-               <div className={`w-8 h-8 rounded-lg ${theme.bg} ${theme.text} flex items-center justify-center`}>
-                 <Icon size={16} />
-               </div>
-            )}
-            
-            <div className="flex items-center gap-2">
-              {stepNumber && <Icon size={16} className="text-slate-400" />}
-              <h3 className={`font-semibold text-slate-700`}>{title}</h3>
+            <div className={`p-2 rounded-lg ${theme.iconBg} ${theme.iconColor}`}>
+               <Icon size={18} />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-             {isActive && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
-             {draggable && <GripVertical size={16} className="text-slate-300" />}
+            <div>
+              <h3 className="font-bold text-sm text-slate-100">{title}</h3>
+              {status && <p className="text-[10px] text-slate-500 font-mono mt-0.5">{status}</p>}
+            </div>
           </div>
        </div>
 
        {/* Body */}
-       <div className="p-5 flex-1 overflow-y-auto max-h-[500px] min-h-[200px] custom-scrollbar space-y-4">
+       <div className="p-4 space-y-3 cursor-default" onMouseDown={(e) => e.stopPropagation()}>
          {children}
        </div>
 
-       {/* Actions Footer */}
+       {/* Footer Actions if present */}
        {actions && (
-         <div className="p-4 border-t border-slate-100 bg-slate-50/50 rounded-b-xl backdrop-blur-sm">
+         <div className="p-3 border-t border-slate-800 bg-slate-900/50 rounded-b-xl" onMouseDown={(e) => e.stopPropagation()}>
            {actions}
          </div>
-       )}
-
-       {/* Connection Point Right */}
-       {stepNumber && (
-        <div className="absolute top-8 -right-3 w-6 h-6 bg-white border border-slate-300 rounded-full z-10 flex items-center justify-center">
-            <div className={`w-2 h-2 rounded-full ${isActive ? theme.dot : 'bg-slate-300'}`} />
-        </div>
        )}
     </div>
   );
 };
 
-export const Connector = ({ active }: { active?: boolean }) => (
-  <div className="flex flex-col items-center justify-center w-24 pt-8 relative flex-shrink-0">
-    <div className={`h-1 w-full ${active ? 'bg-slate-800' : 'bg-slate-200'} transition-colors duration-500 rounded-full`} />
-    <div className={`absolute right-0 top-[26px]`} >
-       {/* Simple arrow head */}
-       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={active ? "#1e293b" : "#e2e8f0"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-         <path d="m9 18 6-6-6-6"/>
-       </svg>
-    </div>
-  </div>
-);
+export const Connector = () => null; // No longer used in Canvas mode
